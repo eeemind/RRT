@@ -1,0 +1,1289 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Relational Reasoning Trainer</title>
+<style>
+*{box-sizing:border-box;font-family:system-ui}
+body{margin:0;background:#0f1220;color:#fff;height:100vh;overflow:hidden}
+#settingsBtn{position:absolute;top:10px;left:10px;padding:8px 12px;background:#22264a;border:none;color:#fff;border-radius:6px;cursor:pointer;z-index:10}
+#historyBtn{position:absolute;top:52px;left:10px;padding:8px 12px;background:#22264a;border:none;color:#fff;border-radius:6px;cursor:pointer;z-index:10}
+#timerDisplay{position:absolute;top:12px;left:50%;transform:translateX(-50%);font-weight:bold;z-index:10}
+#stats{position:absolute;top:10px;right:12px;text-align:right;font-size:14px;opacity:.9;z-index:10}
+#settingsPanel{position:absolute;top:0;left:-320px;width:320px;height:100%;background:#1a1f3c;padding:20px;transition:left .3s;overflow:auto;z-index:20}
+#settingsPanel.open{left:0}
+#historyPanel{position:absolute;top:0;left:-360px;width:360px;height:100%;background:#1a1f3c;padding:20px;transition:left .3s;overflow:auto;z-index:20}
+#historyPanel.open{left:0}
+label{display:block;margin-top:14px;font-size:14px}
+input,select{width:100%;margin-top:6px;padding:6px}
+#closeSettings,#closeHistory{margin-top:20px;width:100%;padding:8px;background:#333a7a;border:none;color:white;cursor:pointer;border-radius:6px}
+#historyList{display:grid;gap:12px;margin-top:12px}
+.historyItem{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px;text-align:left}
+.historyTop{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:8px}
+.historyStatus{font-weight:700}
+.historyMeta{font-size:12px;opacity:.8}
+.historyLabel{font-size:12px;opacity:.75;margin-top:8px;margin-bottom:4px}
+.historyBlock{white-space:pre-wrap;line-height:1.4;font-size:13px;opacity:.95}
+.historyEmpty{opacity:.75;font-size:14px;padding:8px 0}
+#game{height:100%;display:flex;justify-content:center;align-items:center;padding:20px}
+#card{width:520px;max-width:95vw;background:#1c2147;padding:32px;border-radius:12px;text-align:center;max-height:95vh;overflow:auto}
+h2{font-size:18px;opacity:.8;margin:10px 0}
+.premise{margin:6px 0}
+#transformation{margin:14px 0;font-size:16px;font-weight:600;color:#ffd166;min-height:22px}
+#conclusion{margin:20px 0;font-size:18px;font-weight:bold;min-height:24px}
+.buttons{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+button.answer{padding:10px 26px;font-size:16px;border-radius:8px;border:none;cursor:pointer}
+.true{background:#2ecc71}
+.false{background:#e74c3c}
+#feedback{margin-top:16px;height:20px}
+#constructTargets{display:grid;gap:10px;margin-top:10px}
+.constructTask{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:12px;text-align:left}
+.constructTaskHeader{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px;font-size:13px;opacity:.9}
+.constructTaskTitle{font-weight:700}
+.constructTaskPair{font-size:15px}
+.revealBtn{padding:6px 10px;border-radius:8px;border:none;cursor:pointer;background:#333a7a;color:#fff;font-size:12px}
+.spoilerMask{letter-spacing:.1em;opacity:.8}
+#constructUI{display:none;margin-top:15px}
+#constructInput{width:100%;padding:10px;border-radius:8px;border:none;margin-bottom:10px}
+#constructHelp{font-size:12px;opacity:.8;margin-top:4px}
+#submitBuild{width:100%;padding:10px;border-radius:8px;border:none;cursor:pointer;background:#333a7a;color:#fff}
+</style>
+</head>
+<body>
+
+<button id="settingsBtn">⚙</button>
+<button id="historyBtn">🕘</button>
+<div id="timerDisplay"></div>
+
+<div id="stats">
+  <div id="timeToday">Today: 0s</div>
+  <div id="accuracy">Accuracy: 0%</div>
+</div>
+
+<div id="settingsPanel">
+  <h3>Settings</h3>
+
+  <label>Game Mode
+    <select id="gameMode">
+      <option value="classic">Classic</option>
+      <option value="construct">Construct</option>
+    </select>
+  </label>
+
+  <label>Number of Premises
+    <input type="number" id="premiseCount" min="1" max="7" value="2">
+  </label>
+
+  <label>Range of Magnitudes
+    <div style="display:flex;gap:8px">
+      <input type="number" id="minMagnitude" min="1" step="1" value="1" placeholder="X">
+      <input type="number" id="maxMagnitude" min="1" step="1" value="2" placeholder="Y">
+    </div>
+  </label>
+
+  <label>Dimension Mode
+    <select id="dimensionMode">
+      <option value="2">Space 2D</option>
+      <option value="3">Space 3D</option>
+      <option value="4">Space-Time 4D</option>
+      <option value="5">Space-Time 5D</option>
+      <option value="6">Space-Time 6D</option>
+      <option value="7">Space-Time 7D</option>
+    </select>
+  </label>
+
+  <label><input type="checkbox" id="arrowMode"> Use arrows instead of words</label>
+  <label><input type="checkbox" id="transformToggle"> Enable Transformations</label>
+  <label>Number of Transformations
+    <input type="number" id="transformCount" min="0" max="10" value="1">
+  </label>
+  <label>Number of Conclusions
+    <input type="number" id="conclusionCount" min="1" max="5" value="1">
+  </label>
+  <label><input type="checkbox" id="spoilerToggle"> Spoiler construct targets</label>
+  <label><input type="checkbox" id="enableTimer"> Enable Timer</label>
+
+  <label>Timer Duration (seconds)
+    <input type="number" id="timerDuration" min="5" value="30">
+  </label>
+  <a href="https://discord.gg/brain">Mindbuilding Discord</a>
+  <button id="closeSettings">Close</button>
+</div>
+
+<div id="historyPanel">
+  <h3>History</h3>
+  <button id="closeHistory">Close</button>
+  <div id="historyList"></div>
+</div>
+
+<div id="game">
+  <div id="card">
+    <h2>Premises</h2>
+    <div id="premises"></div>
+
+    <div id="transformation"></div>
+
+    <h2>Conclusion</h2>
+    <div id="conclusion"></div>
+    <div id="constructTargets"></div>
+
+    <div class="buttons">
+      <button class="answer true">True</button>
+      <button class="answer false">False</button>
+    </div>
+
+    <div id="constructUI">
+      <input id="constructInput" placeholder="Type the relation, e.g. 2north and above">
+      <button id="submitBuild">Submit</button>
+      <div id="constructHelp">Type only the relation phrase. Example: 5east and 3north</div>
+    </div>
+
+    <div id="feedback"></div>
+  </div>
+</div>
+
+<script>
+/* ========= DOM ========= */
+const settingsBtn = document.getElementById("settingsBtn")
+const historyBtn = document.getElementById("historyBtn")
+const settingsPanel = document.getElementById("settingsPanel")
+const historyPanel = document.getElementById("historyPanel")
+const closeSettings = document.getElementById("closeSettings")
+const closeHistory = document.getElementById("closeHistory")
+const timerDisplay = document.getElementById("timerDisplay")
+const timeTodayDiv = document.getElementById("timeToday")
+const accuracyDiv = document.getElementById("accuracy")
+const premisesDiv = document.getElementById("premises")
+const transformationDiv = document.getElementById("transformation")
+const conclusionDiv = document.getElementById("conclusion")
+const feedbackDiv = document.getElementById("feedback")
+const constructUI = document.getElementById("constructUI")
+const constructInput = document.getElementById("constructInput")
+const submitBuild = document.getElementById("submitBuild")
+const answerButtons = document.querySelectorAll(".answer")
+const buttonsWrap = document.querySelector(".buttons")
+
+const premiseInput = document.getElementById("premiseCount")
+const minMagnitudeInput = document.getElementById("minMagnitude")
+const maxMagnitudeInput = document.getElementById("maxMagnitude")
+const dimensionSelect = document.getElementById("dimensionMode")
+const arrowMode = document.getElementById("arrowMode")
+const transformToggle = document.getElementById("transformToggle")
+const transformCountInput = document.getElementById("transformCount")
+const conclusionCountInput = document.getElementById("conclusionCount")
+const spoilerToggle = document.getElementById("spoilerToggle")
+const enableTimer = document.getElementById("enableTimer")
+const timerDurationInput = document.getElementById("timerDuration")
+const gameMode = document.getElementById("gameMode")
+const constructTargetsDiv = document.getElementById("constructTargets")
+
+/* ========= STATE ========= */
+let correctAnswer = true
+let timer = null
+let timeLeft = 0
+let startTime = 0
+let totalTime = 0
+let totalAnswers = 0
+let correctAnswers = 0
+
+let todayKey = ""
+let storedStats = null
+let trialHistory = []
+
+let objs = {}
+let used = []
+let adjacency = {}
+
+let activePair = null
+let currentConclusionText = ""
+let currentConclusionRelationText = ""
+let targetText = ""
+let currentConstructTasks = []
+let currentActiveDims = []
+
+/* ========= STORAGE ========= */
+function getLocalDateKey(){
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, "0")
+  const d = String(now.getDate()).padStart(2, "0")
+  return `${y}-${m}-${d}`
+}
+
+function loadTodayStats(){
+  todayKey = getLocalDateKey()
+  let data = null
+  try{
+    data = JSON.parse(localStorage.getItem("rrt_stats") || "null")
+  }catch{
+    data = null
+  }
+
+  if(!data || data.date !== todayKey){
+    data = {date: todayKey, time: 0}
+    localStorage.setItem("rrt_stats", JSON.stringify(data))
+  }
+
+  storedStats = data
+  totalTime = Number(data.time || 0)
+  timeTodayDiv.textContent = `Today: ${totalTime}s`
+}
+
+function saveTodayStats(){
+  storedStats = {date: todayKey, time: totalTime}
+  localStorage.setItem("rrt_stats", JSON.stringify(storedStats))
+}
+
+function loadHistory(){
+  try{
+    const data = JSON.parse(localStorage.getItem("rrt_history") || "[]")
+    trialHistory = Array.isArray(data) ? data : []
+  }catch{
+    trialHistory = []
+  }
+}
+
+function saveHistory(){
+  localStorage.setItem("rrt_history", JSON.stringify(trialHistory.slice(0, 100)))
+}
+
+function getTrialBlockText(root, selector){
+  if(!root) return ""
+  const nodes = selector ? root.querySelectorAll(selector) : []
+  const parts = selector ? Array.from(nodes).map(el => el.textContent.trim()).filter(Boolean) : []
+  if(parts.length) return parts.join("\n")
+  return String(root.innerText || root.textContent || "").trim()
+}
+
+function renderHistory(){
+  const list = document.getElementById("historyList")
+  if(!list) return
+  list.innerHTML = ""
+
+  if(!trialHistory.length){
+    const empty = document.createElement("div")
+    empty.className = "historyEmpty"
+    empty.textContent = "No trials yet."
+    list.appendChild(empty)
+    return
+  }
+
+  trialHistory.forEach((trial, idx) => {
+    const card = document.createElement("div")
+    card.className = "historyItem"
+
+    const top = document.createElement("div")
+    top.className = "historyTop"
+
+    const status = document.createElement("div")
+    status.className = "historyStatus"
+    status.textContent = trial.correct ? "✅ Correct" : "❌ Wrong"
+
+    const meta = document.createElement("div")
+    meta.className = "historyMeta"
+    const modeLabel = trial.mode === "construct" ? "Construct" : "Classic"
+    meta.textContent = `${modeLabel} • ${trial.time}s`
+
+    top.appendChild(status)
+    top.appendChild(meta)
+    card.appendChild(top)
+
+    const pLabel = document.createElement("div")
+    pLabel.className = "historyLabel"
+    pLabel.textContent = "Premises"
+    card.appendChild(pLabel)
+
+    const pBlock = document.createElement("div")
+    pBlock.className = "historyBlock"
+    pBlock.textContent = trial.premises || ""
+    card.appendChild(pBlock)
+
+    const cLabel = document.createElement("div")
+    cLabel.className = "historyLabel"
+    cLabel.textContent = "Conclusion"
+    card.appendChild(cLabel)
+
+    const cBlock = document.createElement("div")
+    cBlock.className = "historyBlock"
+    cBlock.textContent = trial.conclusion || ""
+    card.appendChild(cBlock)
+
+    if(trial.details){
+      const dLabel = document.createElement("div")
+      dLabel.className = "historyLabel"
+      dLabel.textContent = "Details"
+      card.appendChild(dLabel)
+
+      const dBlock = document.createElement("div")
+      dBlock.className = "historyBlock"
+      dBlock.textContent = trial.details
+      card.appendChild(dBlock)
+    }
+
+    list.appendChild(card)
+  })
+}
+
+function recordTrialHistory(correct, elapsedSeconds){
+  const premises = getTrialBlockText(premisesDiv, ".premise")
+  const conclusion = String(conclusionDiv.textContent || "").trim()
+  const details = getTrialBlockText(constructTargetsDiv, ".constructTaskPair")
+  trialHistory.unshift({
+    mode: gameMode.value,
+    premises,
+    conclusion,
+    details,
+    time: Math.max(0, Math.round(Number(elapsedSeconds) || 0)),
+    correct: !!correct,
+    timestamp: Date.now()
+  })
+  trialHistory = trialHistory.slice(0, 100)
+  saveHistory()
+  renderHistory()
+}
+
+/* ========= SETTINGS ========= */
+function closeSidePanels(){
+  settingsPanel.classList.remove("open")
+  historyPanel.classList.remove("open")
+}
+
+settingsBtn.onclick = () => {
+  historyPanel.classList.remove("open")
+  settingsPanel.classList.toggle("open")
+}
+historyBtn.onclick = () => {
+  settingsPanel.classList.remove("open")
+  historyPanel.classList.toggle("open")
+}
+closeSettings.onclick = () => settingsPanel.classList.remove("open")
+closeHistory.onclick = () => historyPanel.classList.remove("open")
+
+/* ========= TIMER ========= */
+function startTimer(){
+  clearInterval(timer)
+  if(!enableTimer.checked){
+    timerDisplay.textContent = ""
+    return
+  }
+  timeLeft = +timerDurationInput.value || 30
+  timerDisplay.textContent = `⏱ ${timeLeft}s`
+  timer = setInterval(() => {
+    timeLeft--
+    timerDisplay.textContent = `⏱ ${timeLeft}s`
+    if(timeLeft <= 0){
+      clearInterval(timer)
+      finalize(false, false)
+    }
+  }, 1000)
+}
+
+/* ========= HELPERS ========= */
+function randomSign(){
+  return Math.random() < 0.5 ? -1 : 1
+}
+
+function getMagnitudeRange(){
+  const minMag = Math.max(1, parseInt(minMagnitudeInput?.value || "1", 10) || 1)
+  const maxMag = Math.max(minMag, parseInt(maxMagnitudeInput?.value || "2", 10) || minMag)
+  return {minMag, maxMag}
+}
+
+function pickMagnitudeFromRange(){
+  const {minMag, maxMag} = getMagnitudeRange()
+  const span = maxMag - minMag + 1
+  return minMag + Math.floor(Math.random() * span)
+}
+
+
+function formatSpatialMagnitude(mag, isDiagonal){
+  const n = Math.max(1, Math.round(Number(mag) || 1))
+  if(isDiagonal){
+    return `${n === 1 ? "" : n}√2`
+  }
+  return String(n)
+}
+
+function signToIndex(v){
+  return v + 1
+}
+
+function cloneState(src){
+  return {x:src.x, y:src.y, z:src.z, w:src.w, v:src.v, u:src.u, t:src.t}
+}
+
+function normalizeRelationText(text){
+  return String(text || "")
+    .toLowerCase()
+    .replace(/[.,!?;:()\[\]{}]/g, "")
+    .replace(/\s+/g, "")
+    .replace(/-/g, "")
+}
+
+function formatSpatialToken(mag, dir){
+  const diagonal = ["northeast","northwest","southeast","southwest"].includes(String(dir))
+  return `${formatSpatialMagnitude(mag, diagonal)}${dir}`
+}
+
+function formatDirectionFromVector(dx, dy){
+  const dirs = {
+    "0,1":"north",
+    "0,-1":"south",
+    "1,0":"east",
+    "-1,0":"west",
+    "1,1":"northeast",
+    "-1,1":"northwest",
+    "1,-1":"southeast",
+    "-1,-1":"southwest"
+  }
+  return dirs[`${dx},${dy}`] || null
+}
+
+function formatSpatialRelation(dx, dy){
+  const ax = Math.abs(dx)
+  const ay = Math.abs(dy)
+
+  if(dx === 0 && dy === 0) return null
+
+  if(dx === 0 || dy === 0){
+    const dir = formatDirectionFromVector(Math.sign(dx), Math.sign(dy))
+    const mag = Math.max(ax, ay)
+    if(!dir || mag < 1) return null
+    return formatSpatialToken(mag, dir)
+  }
+
+  if(ax === ay){
+    const dir = formatDirectionFromVector(Math.sign(dx), Math.sign(dy))
+    const mag = ax
+    if(!dir || mag < 1) return null
+    return formatSpatialToken(mag, dir)
+  }
+
+  return null
+}
+
+function formatSpatialArrow(dx, dy){
+  const dirs = {
+    "0,1":"↑",
+    "0,-1":"↓",
+    "1,0":"→",
+    "-1,0":"←",
+    "1,1":"↗",
+    "-1,1":"↖",
+    "1,-1":"↘",
+    "-1,-1":"↙"
+  }
+  return dirs[`${Math.sign(dx)},${Math.sign(dy)}`] || "•"
+}
+
+function parseSpatialToken(token){
+  const cleaned = String(token || "").toLowerCase().replace(/\s+/g, "")
+  const match = cleaned.match(/^(?:(\d+)?(√2)?)?(north|south|east|west|northeast|northwest|southeast|southwest)$/)
+  if(!match) return null
+
+  const mag = parseInt(match[1] || "1", 10)
+  const hasSqrt = Boolean(match[2])
+  const dir = match[3]
+  const map = {
+    north:[0,1], south:[0,-1], east:[1,0], west:[-1,0],
+    northeast:[1,1], northwest:[-1,1], southeast:[1,-1], southwest:[-1,-1]
+  }
+  const base = map[dir]
+  if(!base) return null
+
+  const diagonal = Math.abs(base[0]) === 1 && Math.abs(base[1]) === 1
+  if(hasSqrt && !diagonal) return null
+
+  return {dx: base[0] * mag, dy: base[1] * mag}
+}
+
+function joinRelationParts(parts){
+  if(parts.length === 0) return ""
+  if(parts.length === 1) return parts[0]
+  return parts.slice(0, -1).join(", ") + " and " + parts[parts.length - 1]
+}
+
+function compareTokens(expected, input){
+  return normalizeRelationText(expected) === normalizeRelationText(input)
+}
+
+function parseConstructAnswer(text, activeDims){
+  return parseConstructInputVector(text)
+}
+
+function splitConstructAnswers(raw){
+  return String(raw || "")
+    .replace(/\r/g, "\n")
+    .split(/[\n;]+/)
+    .map(s => s.trim())
+    .filter(Boolean)
+}
+
+function tokenizeConstructRelation(raw){
+  return String(raw || "")
+    .toLowerCase()
+    .replace(/\r/g, " ")
+    .replace(/[.,!?;:()\[\]{}+\-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(" ")
+    .filter(Boolean)
+}
+
+function parseConstructAnswer(text){
+  return parseConstructInputVector(text)
+}
+
+function formatDimensionToken(dim, value){
+  const magnitude = Math.abs(Number(value || 0))
+  const sign = Math.sign(Number(value || 0))
+  if(sign === 0) return "same"
+  return `${magnitude}${dim.words[signToIndex(sign)]}`
+}
+
+function parseDimensionToken(token, dim){
+  const cleaned = normalizeRelationText(token)
+  const words = dim.words.map(w => normalizeRelationText(w))
+  const sameWord = words[1]
+  const baseWords = words.filter(w => w !== sameWord)
+  const match = cleaned.match(new RegExp(`^(?:(\\d+))?(${baseWords.join("|")})$`))
+  if(!match) return null
+
+  const prefix = match[1]
+  const word = match[2]
+  const idx = words.indexOf(word)
+  if(idx === -1) return null
+
+  if(idx === 1){
+    if(prefix && prefix !== "1") return null
+    return 0
+  }
+
+  const mag = prefix ? parseInt(prefix, 10) : 1
+  if(!Number.isFinite(mag) || mag <= 0) return null
+  return (idx === 0 ? -1 : 1) * mag
+}
+
+function relationItemsToVector(items){
+  const vector = {x:0, y:0, z:0, w:0, v:0, u:0, t:0}
+  for(const item of (items || [])){
+    if(!item) continue
+    if(item.type === "spatial"){
+      const parsed = parseSpatialToken(String(item.text || ""))
+      if(parsed){
+        vector.x += Number(parsed.dx || 0)
+        vector.y += Number(parsed.dy || 0)
+      }else{
+        vector.x += Number(item.dx || 0)
+        vector.y += Number(item.dy || 0)
+      }
+      continue
+    }
+    if(item.type === "dim"){
+      const dim = dimensionByKey(item.key)
+      if(!dim) continue
+      const parsed = parseDimensionToken(item.text, dim)
+      if(parsed === null) continue
+      vector[item.key] += Number(parsed || 0)
+    }
+  }
+  return vector
+}
+
+function parseRelationChunkVector(chunk, dims){
+  const cleaned = normalizeRelationText(chunk)
+  if(!cleaned || cleaned === "same") return {x:0, y:0, z:0, w:0, v:0, u:0, t:0}
+
+  const spatial = parseSpatialToken(cleaned)
+  if(spatial){
+    return {x:Number(spatial.dx || 0), y:Number(spatial.dy || 0), z:0, w:0, v:0, u:0, t:0}
+  }
+
+  for(const entry of dims){
+    const parsed = parseDimensionToken(cleaned, entry.dim)
+    if(parsed === null) continue
+    const vector = {x:0, y:0, z:0, w:0, v:0, u:0, t:0}
+    vector[entry.dim.key] = Number(parsed || 0)
+    return vector
+  }
+
+  return null
+}
+
+function parseConstructInputVector(raw){
+  const vector = {x:0, y:0, z:0, w:0, v:0, u:0, t:0}
+  const tokens = tokenizeConstructRelation(raw)
+  if(!tokens.length) return null
+
+  const dims = dimensionDefs.map(dim => ({ dim }))
+  let sawAtom = false
+
+  for(const token of tokens){
+    if(token === "and") continue
+    const part = parseRelationChunkVector(token, dims)
+    if(part === null) return null
+    sawAtom = true
+    vector.x += part.x
+    vector.y += part.y
+    vector.z += part.z
+    vector.w += part.w
+    vector.v += part.v
+    vector.u += part.u
+    vector.t += part.t
+  }
+
+  return sawAtom ? vector : null
+}
+
+function vectorEquals(a, b){
+  const eps = 1e-9
+  return ["x","y","z","w","v","u","t"].every(k => Math.abs(Number(a?.[k] || 0) - Number(b?.[k] || 0)) <= eps)
+}
+
+function flipWord(word){
+  const opposites = {
+    above:"below", below:"above",
+    was:"will be", "will be":"was",
+    further:"closer", closer:"further",
+    lower:"higher", higher:"lower",
+    less:"more", more:"less"
+  }
+  return opposites[word] || word
+}
+
+/* ========= DIMENSIONS ========= */
+const dimensionDefs = [
+  { key:"z", label:"Z", words:["below","same","above"], arrows:["↓","•","↑"] },
+  { key:"w", label:"W", words:["was","same","will be"], arrows:["⏮","⏺","⏭"] },
+  { key:"v", label:"V", words:["further","same","closer"], arrows:["÷","•","×"] },
+  { key:"u", label:"U", words:["lower","same","higher"], arrows:["⇩","•","⇧"] },
+  { key:"t", label:"T", words:["less","same","more"], arrows:["−","•","+"] }
+]
+
+const spatial2D = {
+  north: {dx:0, dy:1},
+  south: {dx:0, dy:-1},
+  east:  {dx:1, dy:0},
+  west:  {dx:-1, dy:0}
+}
+
+function buildCardinalSpatialPiecesFromRelation(dx, dy){
+  const pieces = []
+  if(dx !== 0){
+    const dir = dx > 0 ? "east" : "west"
+    const mag = Math.abs(dx)
+    pieces.push({
+      text: formatSpatialToken(mag, dir),
+      arrow: `${mag}${formatSpatialArrow(dx, 0)}`
+    })
+  }
+  if(dy !== 0){
+    const dir = dy > 0 ? "north" : "south"
+    const mag = Math.abs(dy)
+    pieces.push({
+      text: formatSpatialToken(mag, dir),
+      arrow: `${mag}${formatSpatialArrow(0, dy)}`
+    })
+  }
+  return pieces
+}
+
+function buildCardinalSpatialPiecesFromRelationDir(xDir, xMag, yDir, yMag){
+  const pieces = []
+  if(xMag > 0 && xDir){
+    const dx = xDir === "east" ? 1 : -1
+    pieces.push({
+      text: formatSpatialToken(xMag, xDir),
+      arrow: `${xMag}${formatSpatialArrow(dx * xMag, 0)}`
+    })
+  }
+  if(yMag > 0 && yDir){
+    const dy = yDir === "north" ? 1 : -1
+    pieces.push({
+      text: formatSpatialToken(yMag, yDir),
+      arrow: `${yMag}${formatSpatialArrow(0, dy * yMag)}`
+    })
+  }
+  return pieces
+}
+
+function getActiveDimensions(dims){
+  const active = []
+  if(dims >= 3) active.push(dimensionDefs[0]) // Z
+  if(dims >= 4) active.push(dimensionDefs[1]) // W
+  if(dims >= 5) active.push(dimensionDefs[2]) // V
+  if(dims >= 6) active.push(dimensionDefs[3]) // U
+  if(dims >= 7) active.push(dimensionDefs[4]) // T
+  return active
+}
+
+function axisKeyListForPlaneRotation(includeXY){
+  return includeXY
+    ? ["x","y","z","w","v","u","t"]
+    : ["z","w","v","u","t"]
+}
+
+function pickDifferentName(exceptName){
+  if(used.length <= 1) return exceptName
+  let choice = exceptName
+  let guard = 0
+  while(choice === exceptName && guard < 100){
+    choice = used[Math.floor(Math.random() * used.length)]
+    guard++
+  }
+  return choice
+}
+
+function dimensionByKey(key){
+  return dimensionDefs.find(d => d.key === key) || null
+}
+
+/* ========= RELATION BUILDER ========= */
+function buildRelationItems(A, B, activeDims){
+  const items = []
+
+  activeDims.forEach(dim => {
+    const diff = objs[A][dim.key] - objs[B][dim.key]
+    const s = Math.sign(diff)
+    const mag = Math.abs(diff)
+    const word = dim.words[signToIndex(s)]
+    items.push({
+      type: "dim",
+      key: dim.key,
+      mag,
+      sign: s,
+      word,
+      text: mag === 0 ? "same" : `${mag}${word}`,
+      arrow: mag === 0 ? "•" : `${mag}${dim.arrows[signToIndex(s)]}`
+    })
+  })
+
+  const spatialDx = objs[A].x - objs[B].x
+  const spatialDy = objs[A].y - objs[B].y
+  const spatialPieces = buildCardinalSpatialPiecesFromRelation(spatialDx, spatialDy)
+  spatialPieces.forEach(piece => {
+    items.push({
+      type: "spatial",
+      text: piece.text,
+      arrow: piece.arrow
+    })
+  })
+
+  if(!items.length) return null
+  return items
+}
+
+function itemsToRelation(items){
+  const partsText = items.map(x => x.text)
+  const partsArrow = items.map(x => x.arrow)
+  return {
+    items,
+    partsText,
+    partsArrow,
+    text: joinRelationParts(partsText),
+    arrows: partsArrow.join("")
+  }
+}
+
+/* ========= TRANSFORMATIONS ========= */
+function applyMirror(point, pivot, keys){
+  const out = cloneState(point)
+  keys.forEach(k => {
+    out[k] = 2 * pivot[k] - point[k]
+  })
+  return out
+}
+
+function applyRotation(point, pivot, axisA, axisB, angleDeg, clockwise){
+  const out = cloneState(point)
+  const a = axisA.toLowerCase()
+  const b = axisB.toLowerCase()
+
+  const dx = point[a] - pivot[a]
+  const dy = point[b] - pivot[b]
+
+  let nx = dx
+  let ny = dy
+
+  if(angleDeg === 90){
+    if(clockwise){
+      nx = dy
+      ny = -dx
+    }else{
+      nx = -dy
+      ny = dx
+    }
+  }else if(angleDeg === 45){
+    const ang = (clockwise ? -1 : 1) * Math.PI / 4
+    const rx = dx * Math.cos(ang) - dy * Math.sin(ang)
+    const ry = dx * Math.sin(ang) + dy * Math.cos(ang)
+    nx = Math.round(rx)
+    ny = Math.round(ry)
+  }else{
+    const ang = (clockwise ? -1 : 1) * angleDeg * Math.PI / 180
+    const rx = dx * Math.cos(ang) - dy * Math.sin(ang)
+    const ry = dx * Math.sin(ang) + dy * Math.cos(ang)
+    nx = Math.round(rx)
+    ny = Math.round(ry)
+  }
+
+  out[a] = pivot[a] + nx
+  out[b] = pivot[b] + ny
+  return out
+}
+
+function applyRandomTransformation(activeDims){
+  if(!transformToggle.checked || used.length < 2) return ""
+
+  const source = used[Math.floor(Math.random() * used.length)]
+  const pivot = pickDifferentName(source)
+
+  const doMirror = Math.random() < 0.5
+  if(doMirror){
+    const allKeys = ["x","y","z","w","v","u","t"]
+    objs[source] = applyMirror(objs[source], objs[pivot], allKeys)
+    return `${source} is now mirrored across ${pivot}`
+  }
+
+  const plane90 = [
+    ["x","y","XY"],
+    ["x","z","XZ"],
+    ["x","w","XW"],
+    ["x","v","XV"],
+    ["x","u","XU"],
+    ["x","t","XT"],
+    ["y","z","YZ"],
+    ["y","w","YW"],
+    ["y","v","YV"],
+    ["y","u","YU"],
+    ["y","t","YT"],
+    ["z","w","ZW"],
+    ["z","v","ZV"],
+    ["z","u","ZU"],
+    ["z","t","ZT"],
+    ["w","v","WV"],
+    ["w","u","WU"],
+    ["w","t","WT"],
+    ["v","u","VU"],
+    ["v","t","VT"],
+    ["u","t","UT"]
+  ]
+  const plane45 = [
+    ["z","w","ZW"],
+    ["z","v","ZV"],
+    ["z","u","ZU"],
+    ["z","t","ZT"],
+    ["w","v","WV"],
+    ["w","u","WU"],
+    ["w","t","WT"],
+    ["v","u","VU"],
+    ["v","t","VT"],
+    ["u","t","UT"]
+  ]
+
+  const use45 = Math.random() < 0.5
+  const candidates = use45 ? plane45 : plane90
+  const [ax, ay, label] = candidates[Math.floor(Math.random() * candidates.length)]
+  const angle = use45 ? 45 : 90
+  const clockwise = Math.random() < 0.5
+
+  objs[source] = applyRotation(objs[source], objs[pivot], ax, ay, angle, clockwise)
+  const dirText = clockwise ? "clockwise" : "counterclockwise"
+  return `${source} is rotated ${angle}° ${dirText} in ${label} around ${pivot}`
+}
+
+function pairKey(A, B){
+  return [A, B].sort().join("|")
+}
+
+function graphDistance(start, target, adjacencyMap){
+  const q = [[start, 0]]
+  const visited = new Set()
+  while(q.length){
+    const [node, dist] = q.shift()
+    if(node === target) return dist
+    if(visited.has(node)) continue
+    visited.add(node)
+    for(const nxt of (adjacencyMap[node] || [])){
+      if(!visited.has(nxt)) q.push([nxt, dist + 1])
+    }
+  }
+  return 999
+}
+
+function pickConstructTargets(desiredCount, activeDims, requiredDistance){
+  const candidates = []
+
+  for(let i = 0; i < used.length; i++){
+    for(let j = i + 1; j < used.length; j++){
+      const A = used[i]
+      const B = used[j]
+      if(graphDistance(A, B, adjacency) < requiredDistance) continue
+      const relationItems = buildRelationItems(A, B, activeDims)
+      if(!relationItems) continue
+
+      candidates.push({
+        A,
+        B,
+        key: pairKey(A, B),
+        relationItems,
+        relation: itemsToRelation(relationItems),
+        vector: relationItemsToVector(relationItems)
+      })
+    }
+  }
+
+  const picked = []
+  const usedKeys = new Set()
+  while(candidates.length && picked.length < desiredCount){
+    const idx = Math.floor(Math.random() * candidates.length)
+    const choice = candidates.splice(idx, 1)[0]
+    if(usedKeys.has(choice.key)) continue
+    usedKeys.add(choice.key)
+    picked.push(choice)
+  }
+  return picked
+}
+
+
+function renderConstructTargets(tasks, spoilerOn){
+  constructTargetsDiv.innerHTML = ""
+
+  const safeTasks = Array.isArray(tasks)
+    ? tasks.filter(task => task && typeof task === "object" && task.A && task.B && task.relation)
+    : []
+
+  if(safeTasks.length === 0){
+    return
+  }
+
+  safeTasks.forEach((task, idx) => {
+    const card = document.createElement("div")
+    card.className = "constructTask"
+
+    const header = document.createElement("div")
+    header.className = "constructTaskHeader"
+
+    const title = document.createElement("div")
+    title.className = "constructTaskTitle"
+    title.textContent = `Conclusion ${idx + 1}`
+
+    const pair = document.createElement("div")
+    pair.className = "constructTaskPair"
+    pair.dataset.hidden = spoilerOn ? "1" : "0"
+    pair.textContent = spoilerOn
+      ? `Build relation between ??? and ???`
+      : `Build relation between ${task.A} and ${task.B}`
+
+    header.appendChild(title)
+    card.appendChild(header)
+    card.appendChild(pair)
+
+    if(spoilerOn){
+      const revealBtn = document.createElement("button")
+      revealBtn.type = "button"
+      revealBtn.className = "revealBtn"
+      revealBtn.textContent = "Reveal"
+      revealBtn.onclick = () => {
+        const hidden = pair.dataset.hidden === "1"
+        pair.dataset.hidden = hidden ? "0" : "1"
+        pair.textContent = hidden
+          ? `Build relation between ${task.A} and ${task.B}`
+          : `Build relation between ??? and ???`
+        revealBtn.textContent = hidden ? "Hide" : "Reveal"
+      }
+      card.appendChild(revealBtn)
+    }
+
+    constructTargetsDiv.appendChild(card)
+  })
+}
+
+/* ========= GAME ========= */
+
+function generateGame(){
+  clearInterval(timer)
+  premisesDiv.innerHTML = ""
+  transformationDiv.textContent = ""
+  feedbackDiv.textContent = ""
+  conclusionDiv.textContent = ""
+  constructInput.value = ""
+  constructUI.style.display = "none"
+  buttonsWrap.style.display = "flex"
+  timerDisplay.textContent = ""
+
+  startTime = Date.now()
+  activePair = null
+  targetText = ""
+  currentConclusionText = ""
+  currentConclusionRelationText = ""
+  currentConstructTasks = []
+  currentActiveDims = []
+
+  objs = {}
+  used = []
+  adjacency = {}
+
+  const dims = +dimensionSelect.value
+  const count = +premiseInput.value
+  const activeDims = getActiveDimensions(dims)
+
+  const names = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("")
+  objs[names[0]] = {x:0, y:0, z:0, w:0, v:0, u:0, t:0}
+  used.push(names[0])
+  adjacency[names[0]] = []
+
+  for(let i = 0; i < count; i++){
+    const isConstruct = gameMode.value === "construct"
+    const A = isConstruct ? used[used.length - 1] : used[Math.floor(Math.random() * used.length)]
+    const B = names[used.length]
+    const base = cloneState(objs[A])
+
+    const components = []
+    const arrows = []
+
+    activeDims.forEach(dim => {
+      const v = randomSign()
+      const mag = pickMagnitudeFromRange()
+      base[dim.key] -= v * mag
+      const idx = signToIndex(v)
+      components.push(`${mag}${dim.words[idx]}`)
+      arrows.push(`${mag}${dim.arrows[idx]}`)
+    })
+
+    const xDir = Math.random() < 0.5 ? "east" : "west"
+    const yDir = Math.random() < 0.5 ? "north" : "south"
+    const xMag = pickMagnitudeFromRange()
+    const yMag = pickMagnitudeFromRange()
+
+    base.x -= (xDir === "east" ? 1 : -1) * xMag
+    base.y -= (yDir === "north" ? 1 : -1) * yMag
+
+    const spatialPieces = buildCardinalSpatialPiecesFromRelationDir(xDir, xMag, yDir, yMag)
+    spatialPieces.forEach(piece => {
+      components.push(piece.text)
+      arrows.push(piece.arrow)
+    })
+
+    objs[B] = base
+    used.push(B)
+    adjacency[A].push(B)
+    adjacency[B] = [A]
+
+    const premiseText = arrowMode.checked
+      ? `${A} ${arrows.join("")} ${B}`
+      : `${A} is ${joinRelationParts(components)} of ${B}`
+
+    premisesDiv.innerHTML += `<div class="premise">${premiseText}</div>`
+  }
+
+  const parsedTransformCount = parseInt(transformCountInput.value || "1", 10)
+  const transformCount = Number.isFinite(parsedTransformCount) ? Math.max(0, parsedTransformCount) : 1
+  const transformTexts = []
+  for(let i = 0; i < transformCount; i++){
+    const txt = applyRandomTransformation(activeDims)
+    if(txt) transformTexts.push(txt)
+  }
+  transformationDiv.textContent = transformTexts.join(" | ")
+
+  let A, B, tries = 0
+  const minDistanceClassic = 2
+  const minDistanceConstruct = Math.max(1, count - 2)
+  // Construct mode requires pairs to be at least (premises - 2) links apart.
+  const requiredDistance = gameMode.value === "construct"
+    ? minDistanceConstruct
+    : minDistanceClassic
+
+  do{
+    A = used[Math.floor(Math.random() * used.length)]
+    B = used[Math.floor(Math.random() * used.length)]
+    tries++
+  }while((A === B || graphDistance(A, B, adjacency) < requiredDistance) && tries < 200)
+
+  if(graphDistance(A, B, adjacency) < requiredDistance){
+    let bestA = used[0]
+    let bestB = used[0]
+    let bestDist = -1
+
+    for(let i = 0; i < used.length; i++){
+      for(let j = i + 1; j < used.length; j++){
+        const d = graphDistance(used[i], used[j], adjacency)
+        if(d >= requiredDistance && d > bestDist){
+          bestDist = d
+          bestA = used[i]
+          bestB = used[j]
+        }
+      }
+    }
+
+    if(bestDist >= requiredDistance){
+      A = bestA
+      B = bestB
+    }
+  }
+
+  activePair = {A, B}
+
+  const relationItems = buildRelationItems(A, B, activeDims)
+  if(!relationItems){
+    generateGame()
+    return
+  }
+
+  const relation = itemsToRelation(relationItems)
+  currentConclusionRelationText = relation.text
+
+  if(gameMode.value === "construct"){
+    buttonsWrap.style.display = "none"
+    constructUI.style.display = "block"
+    const desiredCount = Math.max(1, parseInt(conclusionCountInput.value || "1", 10) || 1)
+    currentConstructTasks = pickConstructTargets(desiredCount, activeDims, requiredDistance)
+    currentActiveDims = activeDims
+    constructTargetsDiv.innerHTML = ""
+
+    if(!Array.isArray(currentConstructTasks) || !currentConstructTasks.length){
+      currentConstructTasks = pickConstructTargets(desiredCount, activeDims, 1)
+    }
+
+    renderConstructTargets(currentConstructTasks, spoilerToggle.checked)
+    conclusionDiv.textContent = currentConstructTasks.length === 1
+      ? "Build the relation below"
+      : `Build ${currentConstructTasks.length} relations below`
+    targetText = currentConstructTasks[0]?.relation.text || ""
+    constructInput.value = ""
+    constructInput.placeholder = currentConstructTasks.length === 1
+      ? "Type the relation, e.g. 5east and 3north"
+      : "Type one relation per line, or separate with semicolons"
+    startTimer()
+    return
+  }
+
+  correctAnswer = Math.random() < 0.5
+
+  let shownItems = relation.items.map(item => ({...item}))
+  if(!correctAnswer){
+    const idx = Math.floor(Math.random() * shownItems.length)
+    const picked = shownItems[idx]
+
+    if(picked.type === "spatial"){
+      const keys = Object.keys(spatial2D)
+      let candidate = picked.text
+      let guard = 0
+      while(candidate === picked.text && guard < 50){
+        const newDir = keys[Math.floor(Math.random() * keys.length)]
+        const newMag = pickMagnitudeFromRange()
+        candidate = formatSpatialToken(newMag, newDir)
+        guard++
+      }
+      shownItems[idx] = {
+        ...picked,
+        text: candidate
+      }
+    }else if(picked.type === "dim"){
+      const dim = dimensionByKey(picked.key)
+      const options = dim ? dim.words.filter(x => x !== picked.word) : []
+      const newWord = options.length ? options[Math.floor(Math.random() * options.length)] : flipWord(picked.word || picked.text)
+      const prefix = picked.mag === 0 ? "" : String(picked.mag || 1)
+      shownItems[idx] = {
+        ...picked,
+        word: newWord,
+        text: picked.mag === 0 ? "same" : `${prefix}${newWord}`
+      }
+    }
+  }
+
+  const shownRelation = itemsToRelation(shownItems)
+  currentConclusionText = arrowMode.checked
+    ? `${A} ${shownRelation.arrows} ${B}`
+    : `${A} is ${shownRelation.text} of ${B}`
+
+  conclusionDiv.textContent = currentConclusionText
+  startTimer()
+}
+
+/* ========= FINALIZE / STATS ========= */
+function finalize(userTrue, countTime = true){
+  clearInterval(timer)
+
+  const elapsed = Math.max(0, Math.round((Date.now() - startTime) / 1000))
+  const wasCorrect = userTrue === correctAnswer
+
+  totalAnswers++
+  if(wasCorrect) correctAnswers++
+
+  if(enableTimer.checked && countTime){
+    totalTime += elapsed
+    saveTodayStats()
+  }
+
+  recordTrialHistory(wasCorrect, elapsed)
+
+  timeTodayDiv.textContent = `Today: ${totalTime}s`
+  accuracyDiv.textContent = `Accuracy: ${Math.round(100 * correctAnswers / totalAnswers)}%`
+  feedbackDiv.textContent = wasCorrect ? "✅ Correct" : "❌ Wrong"
+
+  setTimeout(generateGame, 900)
+}
+
+/* ========= CLASSIC ANSWERS ========= */
+answerButtons.forEach(b => {
+  b.onclick = () => finalize(b.classList.contains("true"), true)
+})
+
+/* ========= CONSTRUCT SUBMIT ========= */
+
+function evaluateConstructAnswer(){
+  const tasks = (Array.isArray(currentConstructTasks) ? currentConstructTasks : [])
+    .filter(task => task && typeof task === "object" && task.A && task.B)
+
+  const inputs = splitConstructAnswers(constructInput.value)
+  const userVectors = inputs.map(parseConstructInputVector)
+  const taskVector = task => task?.vector || relationItemsToVector(task?.relationItems || [])
+  let correct = false
+
+  if(tasks.length === 0){
+    correct = false
+  }else if(userVectors.some(v => v === null)){
+    correct = false
+  }else if(tasks.length === 1){
+    correct = userVectors.length >= 1 && vectorEquals(userVectors[0], taskVector(tasks[0]))
+  }else{
+    correct = inputs.length === tasks.length && tasks.every((task, idx) => vectorEquals(userVectors[idx], taskVector(task)))
+  }
+
+  const elapsed = Math.max(0, Math.round((Date.now() - startTime) / 1000))
+
+  totalAnswers++
+  if(correct) correctAnswers++
+
+  if(enableTimer.checked){
+    totalTime += elapsed
+    saveTodayStats()
+  }
+
+  recordTrialHistory(correct, elapsed)
+
+  timeTodayDiv.textContent = `Today: ${totalTime}s`
+  accuracyDiv.textContent = `Accuracy: ${Math.round(100 * correctAnswers / totalAnswers)}%`
+  feedbackDiv.textContent = correct ? "✅ Correct" : "❌ Wrong"
+
+  setTimeout(generateGame, 1000)
+}
+
+submitBuild.onclick = evaluateConstructAnswer
+
+constructInput.addEventListener("keydown", (e) => {
+  if(e.key === "Enter"){
+    evaluateConstructAnswer()
+  }
+})
+
+/* ========= INIT ========= */
+loadTodayStats()
+loadHistory()
+renderHistory()
+generateGame()
+</script>
+</body>
+</html>
